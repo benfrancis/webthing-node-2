@@ -1,0 +1,23 @@
+{
+  "name": "webthing-2",
+  "version": "0.1.0",
+  "description": "Node.js implementation of a W3C WoT Web Thing",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example": "node ./examples/lamp.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benfrancis/webthing-node-2.git"
+  },
+  "author": "Ben Francis",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/benfrancis/webthing-node-2/issues"
+  },
+  "homepage": "https://github.com/benfrancis/webthing-node-2#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

@@ -1,31 +1,5 @@
-# webthing-node-2
-
-Node.js implementation of a W3C WoT web thing
-
-This is a work-in-progress pure Node.js replacement for the webthing-node 
-library which conforms to W3C 
-[WoT Thing Description 1.1](https://www.w3.org/TR/wot-thing-description/).
-It will implement the [HTTP Basic Profile](https://w3c.github.io/wot-profile/#http-basic-profile), 
-[HTTP SSE Profile](https://w3c.github.io/wot-profile/#http-sse-profile) and the
-[Web Thing Protocol (WebSocket sub-protocol)](https://w3c.github.io/web-thing-protocol/).
-
-## Example Web Thing
-
-To run an example web thing representing a lamp:
-
-`$ npm run example`
-
-## Create Your Own Web Thing
-
-Import the webthing library:
-
-```javascript
 import WebThing from '../webthing.js';
-```
 
-Create a partial Thing Description without Forms or security definitions:
-
-```javascript
 const partialTD = {
   "title": "My Lamp",
   "description": "A web connected lamp",
@@ -80,17 +54,9 @@ const partialTD = {
     }
   },
 }
-```
 
-Instantiate a Web Thing from the partial Thing Description:
-
-```javascript
 const thing = new WebThing(partialTD);
-```
 
-Set property handlers:
-
-```javascript
 thing.setPropertyReadHandler('on', async function() {
   return true;
 });
@@ -98,11 +64,5 @@ thing.setPropertyReadHandler('on', async function() {
 thing.setPropertyReadHandler('level', async function() {
   return 50;
 });
-```
 
-Expose to the Thing to the Web of Things by starting its web server, providing 
-a port number as an argument:
-
-```javascript
 thing.expose(8080);
-```
