@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import Thing from '../src/thing.js';
-import ThingServer from '../src/server.js';
+import ThingServer from '../src/thing-server.js';
 
 describe('ThingServer', () => {
   const partialTD = {

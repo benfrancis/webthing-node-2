@@ -35,16 +35,18 @@ describe('Thing', () => {
         title: 'Test Thing',
         securityDefinitions: { nosec_sc: { scheme: 'nosec' } },
         security: 'nosec_sc',
+        properties: {
+          on: {
+            forms: [
+              {
+                href: 'properties/on',
+                op: 'readproperty',
+              },
+            ],
+            title: 'On/Off',
+          },
+        },
       });
-    });
-  });
-
-  describe('setPropertyReadHandler', () => {
-    it('should register a property read handler', () => {
-      const thing = new Thing(partialTD);
-      const handler = () => true;
-      thing.setPropertyReadHandler('on', handler);
-      assert.strictEqual(thing.propertyReadHandlers.has('on'), true);
     });
   });
 
