@@ -1,5 +1,5 @@
 import Thing from '../src/thing.js';
-import ThingServer from '../src/server.js';
+import ThingServer from '../src/thing-server.js';
 
 const partialTD = {
   title: 'My Lamp',
