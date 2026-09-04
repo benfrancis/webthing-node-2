@@ -17,10 +17,14 @@ describe('ThingServer', () => {
 
   let server;
   let baseUrl;
+  let currentValue = true;
 
   before(async () => {
     const thing = new Thing(partialTD);
-    thing.setPropertyReadHandler('on', async () => true);
+    thing.setPropertyReadHandler('on', async () => currentValue);
+    thing.setPropertyWriteHandler('on', async (value) => {
+      currentValue = value;
+    });
     server = new ThingServer(thing);
     // Listen on a random available port to avoid port conflicts
     await new Promise((resolve) => {
@@ -62,6 +66,35 @@ describe('ThingServer', () => {
   describe('GET /properties/:invalidname', () => {
     it('should return 404 for an invalid property name', async () => {
       const response = await fetch(baseUrl + '/properties/foo');
+      assert.strictEqual(response.status, 404);
+    });
+  });
+
+  describe('PUT /properties/:name', () => {
+    it('should update the property value when the property exists', async () => {
+      const response = await fetch(baseUrl + '/properties/on', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(false),
+      });
+
+      assert.strictEqual(response.status, 204);
+      assert.strictEqual(currentValue, false);
+    });
+  });
+
+  describe('PUT /properties/:invalidname', () => {
+    it('should return 404 when the property does not exist', async () => {
+      const response = await fetch(baseUrl + '/properties/foo', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(true),
+      });
+
       assert.strictEqual(response.status, 404);
     });
   });
