@@ -50,24 +50,68 @@ describe('Thing', () => {
     });
   });
 
-  describe('readProperty', () => {
-    it('should return the value from the property read handler', () => {
+  describe('setPropertyReadHandler', () => {
+    it('should register a handler for an existing property', async () => {
       const thing = new Thing(partialTD);
-      thing.setPropertyReadHandler('on', () => true);
-      const value = thing.readProperty('on');
+      thing.setPropertyReadHandler('on', async () => true);
+      const value = await thing.readProperty('on');
       assert.strictEqual(value, true);
     });
 
-    it('should support async property read handlers', async () => {
+    it('should throw when the property does not exist', () => {
       const thing = new Thing(partialTD);
-      thing.setPropertyReadHandler('on', async () => false);
+      assert.throws(
+        () => thing.setPropertyReadHandler('missing', async () => {}),
+        /No property called missing could be found/,
+      );
+    });
+  });
+
+  describe('readProperty', () => {
+    it('should return the value from the property read handler', async () => {
+      const thing = new Thing(partialTD);
+      thing.setPropertyReadHandler('on', async () => true);
       const value = await thing.readProperty('on');
-      assert.strictEqual(value, false);
+      assert.strictEqual(value, true);
     });
 
-    it('should throw when no handler is registered', () => {
+    it('should reject when no handler is registered', async () => {
       const thing = new Thing(partialTD);
-      assert.throws(() => thing.readProperty('on'));
+      await assert.rejects(() => thing.readProperty('on'), /InternalError/);
+    });
+  });
+
+  describe('setPropertyWriteHandler', () => {
+    it('should register a handler for an existing property', async () => {
+      const thing = new Thing(partialTD);
+      thing.setPropertyWriteHandler('on', async (value) => value);
+      const value = await thing.writeProperty('on', true);
+      assert.strictEqual(value, true);
+    });
+
+    it('should throw when the property does not exist', () => {
+      const thing = new Thing(partialTD);
+      assert.throws(
+        () => thing.setPropertyWriteHandler('missing', async () => {}),
+        /No property called missing could be found/,
+      );
+    });
+  });
+
+  describe('writeProperty', () => {
+    it('should return the value from the property write handler', async () => {
+      const thing = new Thing(partialTD);
+      thing.setPropertyWriteHandler('on', async (value) => value);
+      const value = await thing.writeProperty('on', true);
+      assert.strictEqual(value, true);
+    });
+
+    it('should reject when no handler is registered', async () => {
+      const thing = new Thing(partialTD);
+      await assert.rejects(
+        () => thing.writeProperty('on', true),
+        /InternalError/,
+      );
     });
   });
 });

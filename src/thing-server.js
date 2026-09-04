@@ -13,6 +13,8 @@ class ThingServer {
   constructor(thing) {
     this.thing = thing;
     this.app = express();
+    // Use JSON middleware and allow bare primite values as valid JSON
+    this.app.use(express.json({ strict: false }));
     this.server = null;
 
     this.app.get(
@@ -57,6 +59,39 @@ class ThingServer {
           return;
         }
         response.status(200).json(value);
+      },
+    );
+
+    this.app.put(
+      '/properties/:name',
+      /**
+       * @param {Request} request
+       * @param {Response} response
+       */
+      async (request, response) => {
+        // Make sure name is a string since param can also be array
+        const name = Array.isArray(request.params.name)
+          ? request.params.name[0]
+          : request.params.name;
+        const value = request.body;
+        try {
+          await this.thing.writeProperty(name, value);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'InternalError';
+          switch (errorMessage) {
+            case 'NotFoundError':
+              response.status(404).send();
+              break;
+            case 'InternalError':
+              response.status(500).send();
+              break;
+            default:
+              response.status(500).send();
+          }
+          return;
+        }
+        response.status(204).send();
       },
     );
   }

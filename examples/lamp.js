@@ -57,13 +57,25 @@ const partialTD = {
 };
 
 const thing = new Thing(partialTD);
+let currentOnValue = false;
+let currentLevelValue = 100;
 
 thing.setPropertyReadHandler('on', async function () {
-  return true;
+  return currentOnValue;
 });
 
 thing.setPropertyReadHandler('level', async function () {
-  return 50;
+  return currentLevelValue;
+});
+
+thing.setPropertyWriteHandler('on', async function (value) {
+  currentOnValue = value;
+  return;
+});
+
+thing.setPropertyWriteHandler('level', async function (value) {
+  currentLevelValue = value;
+  return;
 });
 
 const server = new ThingServer(thing);

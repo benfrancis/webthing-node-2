@@ -300,7 +300,7 @@ class Thing {
    * Set Property Read Handler.
    *
    * @param {string} name The name of the property to handle.
-   * @param {function} handler A function to handle property reads.
+   * @param {() => Promise<any>} handler A function to handle property reads.
    */
   setPropertyReadHandler(name, handler) {
     let property = this.properties.get(name);
@@ -308,6 +308,20 @@ class Thing {
       throw new Error(`No property called ${name} could be found`);
     }
     property.setReadHandler(handler);
+  }
+
+  /**
+   * Set Property Write Handler.
+   *
+   * @param {string} name The name of the property to handle.
+   * @param {(value: any) => Promise<void>} handler A function to handle property writes.
+   */
+  setPropertyWriteHandler(name, handler) {
+    let property = this.properties.get(name);
+    if (!property) {
+      throw new Error(`No property called ${name} could be found`);
+    }
+    property.setWriteHandler(handler);
   }
 
   /**
@@ -324,6 +338,23 @@ class Thing {
       throw new Error('NotFoundError');
     }
     return property.read();
+  }
+
+  /**
+   * Write Property.
+   *
+   * @param {string} name The name of the property to write.
+   * @param {any} value The property value to write.
+   * @returns {any} The current value of the property, with a format conforming
+   *   to its data schema in the Thing Description.
+   */
+  writeProperty(name, value) {
+    let property = this.properties.get(name);
+    if (!property) {
+      console.error(`No property called ${name} could be found`);
+      throw new Error('NotFoundError');
+    }
+    return property.write(value);
   }
 }
 

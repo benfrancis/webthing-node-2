@@ -168,22 +168,47 @@ class PropertyAffordance extends InteractionAffordance {
   /**
    * Set read handler function.
    *
-   * @param {function} handler A function to handle property reads.
+   * @param {() => Promise<any>} handler An asynchronous function to handle property reads.
    */
   setReadHandler(handler) {
     this.readHandler = handler;
   }
 
   /**
+   * Set write handler function.
+   *
+   * @param {(value: any) => Promise<void>} handler An asynchronous function to handle property writes.
+   */
+  setWriteHandler(handler) {
+    this.writeHandler = handler;
+  }
+
+  /**
    * Read the property.
    *
-   * @returns {any} The current value of the property.
+   * @returns {Promise<any>} The current value of the property.
    */
-  read() {
+  async read() {
     if (this.readHandler) {
       return this.readHandler();
     } else {
       console.error(`No read handler set for property ${this.name}`);
+      throw new Error('InternalError');
+    }
+  }
+
+  /**
+   * Write the property.
+   *
+   * @param {any} value The value to write.
+   * @returns {Promise<void>} A Promise.
+   */
+  async write(value) {
+    // TODO: Check value against type in TD
+    if (this.writeHandler) {
+      return this.writeHandler(value);
+    } else {
+      console.error(`No write handler set for property ${this.name}`);
       throw new Error('InternalError');
     }
   }
