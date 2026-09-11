@@ -67,15 +67,19 @@
 // TODO: Constrain set of possible values for op
 
 /**
- * Property Description
- *
  * @typedef {{
  *   '@type'?: string|Array<string>,
- *   title?: string|undefined,
- *   description?: string|undefined,
+ *   title?: string,
+ *   description?: string
+ * }} InteractionDescription
+ */
+
+/**
+ * Property Description
+ *
+ * @typedef {InteractionDescription & DataSchema & {
  *   forms: Array<Form>,
- *   readOnly?: boolean,
- *   writeOnly?: boolean
+ *   observeable?: boolean|undefined
  * }} PropertyDescription
  */
 
@@ -84,14 +88,38 @@
  *
  * Same as PropertyDescription but forms is optional
  *
- * @typedef {{
- *   '@type'?: string|Array<string>,
- *   title?: string|undefined,
- *   description?: string|undefined,
+ * @typedef {InteractionDescription & DataSchema & {
  *   forms?: Array<Form>,
- *   readOnly?: boolean,
- *   writeOnly?: boolean
+ *   observeable?: boolean|undefined
  * }} PartialPropertyDescription
+ */
+
+/**
+ * Action Description
+ *
+ * @typedef { InteractionDescription & {
+ *   forms: Array<Form>,
+ *   input?: DataSchema,
+ *   output?: DataSchema,
+ *   safe?: boolean,
+ *   idempotent?: boolean,
+ *   synchronous?: boolean,
+ * }} ActionDescription
+ */
+
+/**
+ * Partial Action Description
+ *
+ * Same as ActionDescription but forms is optional
+ *
+ * @typedef { InteractionDescription & {
+ *   forms?: Array<Form>,
+ *   input?: DataSchema,
+ *   output?: DataSchema,
+ *   safe?: boolean,
+ *   idempotent?: boolean,
+ *   synchronous?: boolean,
+ * }} PartialActionDescription
  */
 
 /**
@@ -105,6 +133,7 @@
  *   description?: string,
  *   base?: string,
  *   properties?: Record<string, PropertyDescription>,
+ *   actions?: Record<string, ActionDescription>,
  *   security: string|Array<string>,
  *   securityDefinitions: string|Record<string, object>
  * }} ThingDescription
@@ -124,6 +153,7 @@
  *   description?: string,
  *   base?: string,
  *   properties?: Record<string, PartialPropertyDescription>,
+ *   actions?: Record<string, ActionDescription>,
  *   security?: string|Array<string>,
  *   securityDefinitions?: string|Record<string, object>
  * }} PartialThingDescription
