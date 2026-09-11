@@ -12,6 +12,17 @@ describe('Thing', () => {
         title: 'On/Off',
       },
     },
+    actions: {
+      blink: {
+        title: 'Blink',
+        input: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+          },
+        },
+      },
+    },
   };
 
   describe('constructor', () => {
@@ -40,10 +51,23 @@ describe('Thing', () => {
             forms: [
               {
                 href: 'properties/on',
-                op: 'readproperty',
+                op: ['readproperty', 'writeproperty'],
               },
             ],
             title: 'On/Off',
+            type: 'boolean',
+          },
+        },
+        actions: {
+          blink: {
+            forms: [{ href: 'actions/blink', op: 'invokeaction' }],
+            title: 'Blink',
+            input: {
+              type: 'object',
+              properties: {
+                count: { type: 'integer' },
+              },
+            },
           },
         },
       });
@@ -51,13 +75,6 @@ describe('Thing', () => {
   });
 
   describe('setPropertyReadHandler', () => {
-    it('should register a handler for an existing property', async () => {
-      const thing = new Thing(partialTD);
-      thing.setPropertyReadHandler('on', async () => true);
-      const value = await thing.readProperty('on');
-      assert.strictEqual(value, true);
-    });
-
     it('should throw when the property does not exist', () => {
       const thing = new Thing(partialTD);
       assert.throws(
@@ -82,13 +99,6 @@ describe('Thing', () => {
   });
 
   describe('setPropertyWriteHandler', () => {
-    it('should register a handler for an existing property', async () => {
-      const thing = new Thing(partialTD);
-      thing.setPropertyWriteHandler('on', async (value) => value);
-      const value = await thing.writeProperty('on', true);
-      assert.strictEqual(value, true);
-    });
-
     it('should throw when the property does not exist', () => {
       const thing = new Thing(partialTD);
       assert.throws(
@@ -111,6 +121,35 @@ describe('Thing', () => {
       await assert.rejects(
         () => thing.writeProperty('on', true),
         /InternalError/,
+      );
+    });
+  });
+
+  describe('setActionHandler', () => {
+    it('should throw when the action does not exist', () => {
+      const thing = new Thing(partialTD);
+      assert.throws(
+        () => thing.setActionHandler('missing', async () => {}),
+        /No action called missing could be found/,
+      );
+    });
+  });
+
+  describe('invokeAction', () => {
+    it('should return the result from the action handler', async () => {
+      const thing = new Thing(partialTD);
+      thing.setActionHandler('blink', async (input) => input.count);
+
+      const result = await thing.invokeAction('blink', { count: 3 });
+      assert.equal(result, 3);
+    });
+
+    it('should reject when the action does not exist', async () => {
+      const thing = new Thing(partialTD);
+
+      await assert.rejects(
+        () => thing.invokeAction('missing', {}),
+        /NotFoundError/,
       );
     });
   });

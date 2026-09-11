@@ -40,6 +40,11 @@
  *   const?: any,
  *   default?: any,
  *   unit?: string,
+ *   minimum?: number,
+ *   maximum?: number,
+ *   properties?: Record<string, DataSchema>,
+ *   required?: Array<string>,
+ *   items?: DataSchema,
  *   oneOf?: Array<DataSchema>,
  *   enum?: Array<any>,
  *   readOnly?: boolean,
@@ -67,15 +72,19 @@
 // TODO: Constrain set of possible values for op
 
 /**
- * Property Description
- *
  * @typedef {{
  *   '@type'?: string|Array<string>,
- *   title?: string|undefined,
- *   description?: string|undefined,
+ *   title?: string,
+ *   description?: string
+ * }} InteractionDescription
+ */
+
+/**
+ * Property Description
+ *
+ * @typedef {InteractionDescription & DataSchema & {
  *   forms: Array<Form>,
- *   readOnly?: boolean,
- *   writeOnly?: boolean
+ *   observeable?: boolean|undefined
  * }} PropertyDescription
  */
 
@@ -84,14 +93,62 @@
  *
  * Same as PropertyDescription but forms is optional
  *
- * @typedef {{
- *   '@type'?: string|Array<string>,
- *   title?: string|undefined,
- *   description?: string|undefined,
+ * @typedef {InteractionDescription & DataSchema & {
  *   forms?: Array<Form>,
- *   readOnly?: boolean,
- *   writeOnly?: boolean
+ *   observeable?: boolean|undefined
  * }} PartialPropertyDescription
+ */
+
+/**
+ * Action Description
+ *
+ * @typedef { InteractionDescription & {
+ *   forms: Array<Form>,
+ *   input?: DataSchema,
+ *   output?: DataSchema,
+ *   safe?: boolean,
+ *   idempotent?: boolean,
+ *   synchronous?: boolean,
+ * }} ActionDescription
+ */
+
+/**
+ * Partial Action Description
+ *
+ * Same as ActionDescription but forms is optional
+ *
+ * @typedef { InteractionDescription & {
+ *   forms?: Array<Form>,
+ *   input?: DataSchema,
+ *   output?: DataSchema,
+ *   safe?: boolean,
+ *   idempotent?: boolean,
+ *   synchronous?: boolean,
+ * }} PartialActionDescription
+ */
+
+/**
+ * Event Description
+ *
+ * @typedef {InteractionDescription & {
+ *   forms: Array<Form>,
+ *   subscription?: DataSchema,
+ *   data?: DataSchema,
+ *   dataResponse?: DataSchema,
+ *   cancellation?: DataSchema,
+ * }} EventDescription
+ */
+
+/**
+ * Partial Event Description
+ *
+ * @typedef {InteractionDescription & {
+ *   forms?: Array<Form>,
+ *   subscription?: DataSchema,
+ *   data?: DataSchema,
+ *   dataResponse?: DataSchema,
+ *   cancellation?: DataSchema,
+ * }} PartialEventDescription
  */
 
 /**
@@ -105,6 +162,8 @@
  *   description?: string,
  *   base?: string,
  *   properties?: Record<string, PropertyDescription>,
+ *   actions?: Record<string, ActionDescription>,
+ *   events?: Record<string, EventDescription>,
  *   security: string|Array<string>,
  *   securityDefinitions: string|Record<string, object>
  * }} ThingDescription
@@ -124,7 +183,36 @@
  *   description?: string,
  *   base?: string,
  *   properties?: Record<string, PartialPropertyDescription>,
+ *   actions?: Record<string, PartialActionDescription>,
+ *   events?: Record<string, PartialEventDescription>,
  *   security?: string|Array<string>,
  *   securityDefinitions?: string|Record<string, object>
  * }} PartialThingDescription
+ */
+
+/**
+ * Action Status
+ *
+ * @typedef {{
+ *   actionID: string,
+ *   state: 'pending'|'running'|'completed'|'failed',
+ *   output?: any,
+ *   error: ProblemDetails
+ *   timeRequested?: string,
+ *   timeEnded?: string
+ * }} ActionStatus
+ */
+
+/**
+ * Problem Details
+ *
+ * Conforming to RFC 9457 https://www.rfc-editor.org/info/rfc9457/
+ *
+ * @typedef {{
+ *   type?: string,
+ *   title?: string,
+ *   status?: number,
+ *   detail?: string,
+ *   instance?: string
+ * }} ProblemDetails
  */

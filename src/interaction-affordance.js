@@ -1,5 +1,5 @@
 import ValidationError from './validation-error.js';
-/** @import {DataSchema, Form} from "./types.js" */
+/** @import {Form, InteractionDescription} from "./types.js" */
 
 /**
  * Interaction Affordance
@@ -207,6 +207,22 @@ class InteractionAffordance {
     }
 
     this.description = description;
+  }
+  /**
+   * @returns {InteractionDescription}
+   */
+  getMetadata() {
+    let metadata = {};
+    if (this['@type']) {
+      metadata['@type'] = this['@type'];
+    }
+    if (this.title) {
+      metadata.title = this.title;
+    }
+    if (this.description) {
+      metadata.description = this.description;
+    }
+    return metadata;
   }
 }
 

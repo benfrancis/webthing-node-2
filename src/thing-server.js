@@ -20,6 +20,8 @@ class ThingServer {
     this.app.get(
       '/',
       /**
+       * Get Thing Description
+       *
        * @param {Request} request
        * @param {Response} response
        */
@@ -32,6 +34,8 @@ class ThingServer {
     this.app.get(
       '/properties/:name',
       /**
+       * Read Property
+       *
        * @param {Request} request
        * @param {Response} response
        */
@@ -65,6 +69,8 @@ class ThingServer {
     this.app.put(
       '/properties/:name',
       /**
+       * Write Property
+       *
        * @param {Request} request
        * @param {Response} response
        */
@@ -83,6 +89,9 @@ class ThingServer {
             case 'NotFoundError':
               response.status(404).send();
               break;
+            case 'BadRequest':
+              response.status(400).send();
+              break;
             case 'InternalError':
               response.status(500).send();
               break;
@@ -92,6 +101,51 @@ class ThingServer {
           return;
         }
         response.status(204).send();
+      },
+    );
+
+    this.app.post(
+      '/actions/:name',
+      /**
+       * Invoke Action
+       *
+       * @param {Request} request
+       * @param {Response} response
+       *
+       * Note: All actions are currently treated as synchronous.
+       */
+      async (request, response) => {
+        // Make sure name is a string since param can also be array
+        const name = Array.isArray(request.params.name)
+          ? request.params.name[0]
+          : request.params.name;
+        const input = request.body;
+        let output;
+        try {
+          output = await this.thing.invokeAction(name, input);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'InternalError';
+          switch (errorMessage) {
+            case 'NotFoundError':
+              response.status(404).send();
+              break;
+            case 'BadRequest':
+              response.status(400).send();
+              break;
+            case 'InternalError':
+              response.status(500).send();
+              break;
+            default:
+              response.status(500).send();
+          }
+          return;
+        }
+        if (output != undefined) {
+          response.status(200).send(output);
+        } else {
+          response.status(204).send();
+        }
       },
     );
   }

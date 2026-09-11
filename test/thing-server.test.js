@@ -13,6 +13,11 @@ describe('ThingServer', () => {
         title: 'On/Off',
       },
     },
+    actions: {
+      blink: {
+        title: 'Blink',
+      },
+    },
   };
 
   let server;
@@ -25,6 +30,7 @@ describe('ThingServer', () => {
     thing.setPropertyWriteHandler('on', async (value) => {
       currentValue = value;
     });
+    thing.setActionHandler('blink', async (input) => input);
     server = new ThingServer(thing);
     // Listen on a random available port to avoid port conflicts
     await new Promise((resolve) => {
@@ -93,6 +99,36 @@ describe('ThingServer', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(true),
+      });
+
+      assert.strictEqual(response.status, 404);
+    });
+  });
+
+  describe('POST /actions/:name', () => {
+    it('should invoke the action and return its output', async () => {
+      const input = { duration: 3 };
+      const response = await fetch(baseUrl + '/actions/blink', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+
+      assert.strictEqual(response.status, 200);
+      assert.deepEqual(await response.json(), input);
+    });
+  });
+
+  describe('POST /actions/:invalidname', () => {
+    it('should return 404 when the action does not exist', async () => {
+      const response = await fetch(baseUrl + '/actions/foo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
       });
 
       assert.strictEqual(response.status, 404);

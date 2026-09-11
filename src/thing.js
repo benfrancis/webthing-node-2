@@ -1,6 +1,10 @@
 import ValidationError from './validation-error.js';
 import PropertyAffordance from './property-affordance.js';
-/** @import {SecurityScheme, PartialPropertyDescription, PropertyDescription, PartialThingDescription, ThingDescription} from "./types.js" */
+import ActionAffordance from './action-affordance.js';
+/** @import {SecurityScheme, PartialPropertyDescription, PropertyDescription,
+ *    PartialActionDescription, ActionDescription, PartialThingDescription,
+ *    ThingDescription, ActionStatus} from "./types.js"
+ */
 
 /**
  * Thing
@@ -29,6 +33,11 @@ class Thing {
   properties = new Map();
 
   /**
+   * @type {Map<string, ActionAffordance>}
+   */
+  actions = new Map();
+
+  /**
    * @type {Record<string, SecurityScheme>}
    */
   securityDefinitions;
@@ -55,46 +64,37 @@ class Thing {
 
     // Parse base member
     try {
-      this.#parseBaseMember(partialTD['base']);
+      this.#parseBaseMember(partialTD.base);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
     }
 
     // Parse @context member
     try {
       this.#parseContextMember(partialTD['@context']);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
     }
 
     // Parse title member
     try {
       this.#parseTitleMember(partialTD.title);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
     }
 
     // Parse properties member
     try {
       this.#parsePropertiesMember(partialTD.properties);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
+    }
+
+    // Parse actions member
+    try {
+      this.#parseActionsMember(partialTD.actions);
+    } catch (error) {
+      validationError.merge(error);
     }
 
     // Hard code the nosec security scheme for now
@@ -106,6 +106,10 @@ class Thing {
     this.security = 'nosec_sc';
 
     // TODO: Parse other members
+
+    if (validationError.validationErrors.length > 0) {
+      throw validationError;
+    }
   }
 
   /**
@@ -248,6 +252,34 @@ class Thing {
   }
 
   /**
+   * Parse the actions member of a Thing Description.
+   *
+   * @param {Record<string, PartialActionDescription>|undefined} actionDescriptions Map of action
+   *   descriptions provided in a partial TD, indexed by action name.
+   */
+  #parseActionsMember(actionDescriptions) {
+    // If the actions member is not set then continue
+    if (!actionDescriptions) {
+      return;
+    }
+
+    // If the provided actions member is not an object then throw a validation error
+    if (typeof actionDescriptions !== 'object') {
+      throw new ValidationError([
+        {
+          field: 'actions',
+          description: 'actions member is not an object',
+        },
+      ]);
+    }
+
+    // Generate a map of Action objects from action descriptions
+    for (const actionName in actionDescriptions) {
+      this.addAction(actionName, actionDescriptions[actionName]);
+    }
+  }
+
+  /**
    * Add a Property.
    *
    * @param {string} propertyName The name of the property to add.
@@ -257,6 +289,18 @@ class Thing {
   addProperty(propertyName, propertyDescription) {
     let property = new PropertyAffordance(propertyName, propertyDescription);
     this.properties.set(propertyName, property);
+  }
+
+  /**
+   * Add an Action.
+   *
+   * @param {string} actionName The name of the action to add.
+   * @param {PartialActionDescription} actionDescription A description of an
+   *   ActionAffordance from a Thing Description.
+   */
+  addAction(actionName, actionDescription) {
+    let action = new ActionAffordance(actionName, actionDescription);
+    this.actions.set(actionName, action);
   }
 
   /**
@@ -277,13 +321,23 @@ class Thing {
       }
     }
 
+    /**
+     * @type {Record<string, ActionDescription>}
+     */
+    let actions = {};
+    for (const actionName of this.actions.keys()) {
+      const action = this.actions.get(actionName);
+      if (action) {
+        actions[actionName] = action.getMetadata();
+      }
+    }
+
     /** @type {ThingDescription} */
     const thingDescription = {
       '@context': this.context,
       title: this.title,
       securityDefinitions: this.securityDefinitions,
       security: this.security,
-      properties: properties,
       // TODO: generate top level forms
     };
     // If a base argument is provided then use that, otherwise use the base provided in the
@@ -292,6 +346,14 @@ class Thing {
       thingDescription.base = `http://${host}/`;
     } else if (this.base) {
       thingDescription.base = this.base.href;
+    }
+    // If properties are defined then add a properties member
+    if (Object.keys(properties).length > 0) {
+      thingDescription.properties = properties;
+    }
+    // If actions are defined then add an actions member
+    if (Object.keys(actions).length > 0) {
+      thingDescription.actions = actions;
     }
     return thingDescription;
   }
@@ -314,7 +376,7 @@ class Thing {
    * Set Property Write Handler.
    *
    * @param {string} name The name of the property to handle.
-   * @param {(value: any) => Promise<void>} handler A function to handle property writes.
+   * @param {(value: any) => Promise<void>} handler An async function to handle property writes.
    */
   setPropertyWriteHandler(name, handler) {
     let property = this.properties.get(name);
@@ -322,6 +384,20 @@ class Thing {
       throw new Error(`No property called ${name} could be found`);
     }
     property.setWriteHandler(handler);
+  }
+
+  /**
+   * Set Action Handler.
+   *
+   * @param {string} name The name of the action to handle.
+   * @param {(value: any) => Promise<any>} handler An async function to handle action invocations.
+   */
+  setActionHandler(name, handler) {
+    let action = this.actions.get(name);
+    if (!action) {
+      throw new Error(`No action called ${name} could be found`);
+    }
+    action.setInvokeHandler(handler);
   }
 
   /**
@@ -345,16 +421,35 @@ class Thing {
    *
    * @param {string} name The name of the property to write.
    * @param {any} value The property value to write.
-   * @returns {any} The current value of the property, with a format conforming
-   *   to its data schema in the Thing Description.
+   * @returns {Promise<void>} A Promise that resolves once the property has been
+   *   written successfully.
    */
-  writeProperty(name, value) {
+  async writeProperty(name, value) {
     let property = this.properties.get(name);
     if (!property) {
       console.error(`No property called ${name} could be found`);
       throw new Error('NotFoundError');
     }
     return property.write(value);
+  }
+
+  /**
+   * Invoke Action.
+   *
+   * @param {string} name The name of the action to invoke.
+   * @param {any} input The action input.
+   * @returns {Promise<any>} A Promise resolving to the output of the action,
+   *   conforming to the output data schema.
+   *
+   * Note: All actions are currently treated as synchronous.
+   */
+  async invokeAction(name, input) {
+    let action = this.actions.get(name);
+    if (!action) {
+      console.error(`No action called ${name} could be found`);
+      throw new Error('NotFoundError');
+    }
+    return action.invoke(input);
   }
 }
 

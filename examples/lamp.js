@@ -1,6 +1,9 @@
 import Thing from '../src/thing.js';
 import ThingServer from '../src/thing-server.js';
 
+/** @import {PartialThingDescription} from '../src/types.js' */
+
+/** @satisfies {PartialThingDescription} */
 const partialTD = {
   title: 'My Lamp',
   description: 'A web connected lamp',
@@ -11,7 +14,7 @@ const partialTD = {
       description: 'Whether the lamp is turned on',
     },
     level: {
-      type: 'integer',
+      type: 'number',
       title: 'Brightness',
       description: 'The level of light from 0-100',
       unit: 'percent',
@@ -29,7 +32,7 @@ const partialTD = {
         properties: {
           level: {
             title: 'Brightness',
-            type: 'integer',
+            type: 'number',
             minimum: 0,
             maximum: 100,
             unit: 'percent',
@@ -76,6 +79,42 @@ thing.setPropertyWriteHandler('on', async function (value) {
 thing.setPropertyWriteHandler('level', async function (value) {
   currentLevelValue = value;
   return;
+});
+
+thing.setActionHandler('fade', async function (input) {
+  if (
+    typeof input.level !== 'number' ||
+    !Number.isFinite(input.level) ||
+    input.level < 0 ||
+    input.level > 100 ||
+    typeof input.duration !== 'number' ||
+    !Number.isFinite(input.duration) ||
+    input.duration < 0
+  ) {
+    throw new Error('BadRequest');
+  }
+
+  const startLevel = currentLevelValue;
+  const targetLevel = input.level;
+  const duration = input.duration;
+  const startTime = performance.now();
+
+  if (duration === 0) {
+    currentLevelValue = targetLevel;
+    return;
+  }
+
+  let elapsed = 0;
+  while (elapsed < duration) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(100, duration - elapsed)),
+    );
+    elapsed = Math.min(performance.now() - startTime, duration);
+    currentLevelValue =
+      startLevel + (targetLevel - startLevel) * (elapsed / duration);
+  }
+
+  currentLevelValue = targetLevel;
 });
 
 const server = new ThingServer(thing);

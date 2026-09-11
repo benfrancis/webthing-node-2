@@ -55,7 +55,7 @@ class PropertyAffordance extends InteractionAffordance {
   format;
 
   /**
-   * @type {('object'|'array'|'string'|'number'|'integer'|'bool * @property {Array<Form>} formsean'|'null')|undefined}
+   * @type {('object'|'array'|'string'|'number'|'integer'|'boolean'|'null')|undefined}
    */
   type;
 
@@ -83,22 +83,14 @@ class PropertyAffordance extends InteractionAffordance {
     try {
       this.#parseReadOnlyMember(metadata.readOnly);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
     }
 
     // Parse writeOnly member
     try {
       this.#parseWriteOnlyMember(metadata.writeOnly);
     } catch (error) {
-      if (error instanceof ValidationError) {
-        validationError.validationErrors.push(...error.validationErrors);
-      } else {
-        throw error;
-      }
+      validationError.merge(error);
     }
 
     // Check that readOnly and writeOnly are not both set
@@ -106,13 +98,24 @@ class PropertyAffordance extends InteractionAffordance {
       let readWriteError = new ValidationError([
         {
           field: `properties.${this.name}.readOnly`,
-          description: 'readOnly member is not a boolean',
+          description: 'property can not be readOnly and writeOnly',
         },
       ]);
-      validationError.validationErrors.push(...readWriteError.validationErrors);
+      validationError.merge(readWriteError);
+    }
+
+    // Parse type member
+    try {
+      this.#parseTypeMember(metadata.type);
+    } catch (error) {
+      validationError.merge(error);
     }
 
     // TODO: Parse other members
+
+    if (validationError.validationErrors.length > 0) {
+      throw validationError;
+    }
   }
 
   /**
@@ -166,6 +169,47 @@ class PropertyAffordance extends InteractionAffordance {
   }
 
   /**
+   * Parse type member.
+   *
+   * @param {string|undefined} type
+   */
+  #parseTypeMember(type) {
+    // Throw an error if not a boolean or undefined
+    if (type === undefined) {
+      return;
+    }
+    if (typeof type != 'string') {
+      throw new ValidationError([
+        {
+          field: `properties.${this.name}.type`,
+          description: 'type is set but is not a string',
+        },
+      ]);
+    }
+
+    if (
+      !(
+        type == 'object' ||
+        type == 'array' ||
+        type == 'string' ||
+        type == 'number' ||
+        type == 'integer' ||
+        type == 'boolean' ||
+        type == 'null'
+      )
+    ) {
+      throw new ValidationError([
+        {
+          field: `properties.${this.name}.type`,
+          description: 'Invalid value',
+        },
+      ]);
+    }
+
+    this.type = type;
+  }
+
+  /**
    * Set read handler function.
    *
    * @param {() => Promise<any>} handler An asynchronous function to handle property reads.
@@ -204,7 +248,7 @@ class PropertyAffordance extends InteractionAffordance {
    * @returns {Promise<void>} A Promise.
    */
   async write(value) {
-    // TODO: Check value against type in TD
+    // TODO: Validate value against data schema
     if (this.writeHandler) {
       return this.writeHandler(value);
     } else {
@@ -217,26 +261,37 @@ class PropertyAffordance extends InteractionAffordance {
    * @returns {PropertyDescription}
    */
   getMetadata() {
-    let metadata = {};
-    if (this['@type']) {
-      metadata['@type'] = this['@type'];
-    }
-    if (this.title) {
-      metadata.title = this.title;
-    }
-    if (this.description) {
-      metadata.description = this.description;
-    }
+    let metadata = /** @type {PropertyDescription} */ (super.getMetadata());
     /** @type {Array<Form>} */
     metadata.forms = [];
 
-    if (this.writeOnly !== true) {
-      const readPropertyForm = {
-        href: `properties/${this.name}`,
-        op: 'readproperty',
-      };
-      metadata.forms.push(readPropertyForm);
+    // Only set type member if explicitly set
+    if (this.type != undefined) {
+      metadata.type = this.type;
     }
+
+    // Only set readOnly member if explicitly set to true since false is default
+    if (this.readOnly === true) {
+      metadata.readOnly = true;
+    }
+
+    // Only set writeOnly member if explicitly set to true since false is default
+    if (this.writeOnly === true) {
+      metadata.writeOnly = true;
+    }
+
+    // Generate Form
+    const propertyForm = {
+      href: `properties/${this.name}`,
+      op: /** @type {Array<string>} */ ([]),
+    };
+    if (this.writeOnly !== true) {
+      propertyForm.op.push('readproperty');
+    }
+    if (this.readOnly !== true) {
+      propertyForm.op.push('writeproperty');
+    }
+    metadata.forms.push(propertyForm);
 
     return metadata;
   }

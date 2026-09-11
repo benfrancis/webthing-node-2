@@ -28,6 +28,19 @@ class ValidationError extends Error {
     super(...params);
     this.validationErrors = validationErrors;
   }
+
+  /**
+   * Merge a list of validation errors into this ValidationError.
+   *
+   * @param {any} error
+   */
+  merge(error) {
+    if (error instanceof ValidationError) {
+      this.validationErrors.push(...error.validationErrors);
+    } else {
+      throw error;
+    }
+  }
 }
 
 export default ValidationError;
