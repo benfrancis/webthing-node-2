@@ -2,11 +2,14 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "target": "es2022"
   },
-  "include": ["src/**/*.js", "examples/**/*.js"]
+  "include": ["src/**/*.js"]
 }
