@@ -387,17 +387,28 @@ class Thing {
   }
 
   /**
-   * Set Action Handler.
+   * Set Action Invoke Handler.
    *
    * @param {string} name The name of the action to handle.
    * @param {(value: any) => Promise<any>} handler An async function to handle action invocations.
    */
-  setActionHandler(name, handler) {
+  setActionInvokeHandler(name, handler) {
     let action = this.actions.get(name);
     if (!action) {
       throw new Error(`No action called ${name} could be found`);
     }
     action.setInvokeHandler(handler);
+  }
+
+  /**
+   * Set Action Handler.
+   *
+   * @deprecated Use setActionInvokeHandler instead.
+   * @param {string} name The name of the action to handle.
+   * @param {(value: any) => Promise<any>} handler An async function to handle action invocations.
+   */
+  setActionHandler(name, handler) {
+    return this.setActionInvokeHandler(name, handler);
   }
 
   /**
@@ -438,10 +449,8 @@ class Thing {
    *
    * @param {string} name The name of the action to invoke.
    * @param {any} input The action input.
-   * @returns {Promise<any>} A Promise resolving to the output of the action,
-   *   conforming to the output data schema.
-   *
-   * Note: All actions are currently treated as synchronous.
+   * @returns {Promise<any|import('./action-request.js').default>} Resolves with
+   *   the output for synchronous actions or an ActionRequest for asynchronous actions.
    */
   async invokeAction(name, input) {
     let action = this.actions.get(name);
@@ -450,6 +459,25 @@ class Thing {
       throw new Error('NotFoundError');
     }
     return action.invoke(input);
+  }
+
+  /**
+   * Query the status of an action request.
+   *
+   * @param {string} name The name of the action.
+   * @param {string} id The action request ID.
+   * @returns {ActionStatus} The current action request status.
+   */
+  queryAction(name, id) {
+    const action = this.actions.get(name);
+    if (!action) {
+      throw new Error('NotFoundError');
+    }
+    const request = action.actionRequests.get(id);
+    if (!request) {
+      throw new Error('NotFoundError');
+    }
+    return request.query();
   }
 }
 

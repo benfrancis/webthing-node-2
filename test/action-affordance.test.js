@@ -90,6 +90,7 @@ describe('ActionAffordance', () => {
     it('should call the registered invoke handler with the action input', async () => {
       const action = new ActionAffordance('setColor', {
         input: { type: 'string' },
+        synchronous: true,
       });
       action.setInvokeHandler(async (value) => ({ value }));
 
@@ -103,6 +104,48 @@ describe('ActionAffordance', () => {
       });
 
       await assert.rejects(() => action.invoke('red'), /InternalError/);
+    });
+
+    it('should return a request that resolves when an asynchronous action completes', async () => {
+      const action = new ActionAffordance('setColor', {
+        synchronous: false,
+      });
+      let finishAction;
+      action.setInvokeHandler(
+        () =>
+          new Promise((resolve) => {
+            finishAction = resolve;
+          }),
+      );
+
+      const request = await action.invoke('red');
+      assert.equal(request.state, 'running');
+      finishAction(false);
+      assert.equal(await request.completion, false);
+      assert.deepEqual(request.query(), {
+        id: request.id,
+        state: 'completed',
+        output: false,
+        timeRequested: request.timeRequested.toISOString(),
+        timeEnded: request.timeEnded.toISOString(),
+      });
+    });
+
+    it('should expose asynchronous failures through completion and status', async () => {
+      const action = new ActionAffordance('setColor', {
+        synchronous: false,
+      });
+      action.setInvokeHandler(async () => {
+        throw new Error('Action failed');
+      });
+
+      const request = await action.invoke('red');
+      await assert.rejects(request.completion, /Action failed/);
+      assert.equal(request.state, 'failed');
+      assert.deepEqual(request.error, {
+        title: 'Error',
+        detail: 'Action failed',
+      });
     });
   });
 });

@@ -15,6 +15,7 @@ describe('Thing', () => {
     actions: {
       blink: {
         title: 'Blink',
+        synchronous: true,
         input: {
           type: 'object',
           properties: {
@@ -62,6 +63,7 @@ describe('Thing', () => {
           blink: {
             forms: [{ href: 'actions/blink', op: 'invokeaction' }],
             title: 'Blink',
+            synchronous: true,
             input: {
               type: 'object',
               properties: {
@@ -125,23 +127,41 @@ describe('Thing', () => {
     });
   });
 
-  describe('setActionHandler', () => {
+  describe('setActionInvokeHandler', () => {
     it('should throw when the action does not exist', () => {
       const thing = new Thing(partialTD);
       assert.throws(
-        () => thing.setActionHandler('missing', async () => {}),
+        () => thing.setActionInvokeHandler('missing', async () => {}),
         /No action called missing could be found/,
       );
+    });
+
+    it('should retain the setActionHandler alias', async () => {
+      const thing = new Thing(partialTD);
+      thing.setActionHandler('blink', async () => 'ok');
+      assert.equal(await thing.invokeAction('blink', {}), 'ok');
     });
   });
 
   describe('invokeAction', () => {
     it('should return the result from the action handler', async () => {
       const thing = new Thing(partialTD);
-      thing.setActionHandler('blink', async (input) => input.count);
+      thing.setActionInvokeHandler('blink', async (input) => input.count);
 
       const result = await thing.invokeAction('blink', { count: 3 });
       assert.equal(result, 3);
+    });
+
+    it('should return an asynchronous request and allow its status to be queried', async () => {
+      const thing = new Thing({
+        ...partialTD,
+        actions: { blink: { synchronous: false } },
+      });
+      thing.setActionInvokeHandler('blink', async () => false);
+
+      const request = await thing.invokeAction('blink', {});
+      assert.equal(await request.completion, false);
+      assert.deepEqual(thing.queryAction('blink', request.id), request.query());
     });
 
     it('should reject when the action does not exist', async () => {

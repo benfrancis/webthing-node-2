@@ -106,6 +106,28 @@ const server = new ThingServer(thing);
 server.start(8080);
 ```
 
+For an action declared with `synchronous: false` (or without a `synchronous`
+member), `thing.invokeAction()` resolves to an `ActionRequest`. Await its
+`completion` promise to receive the action output or failure, or call `query()`
+to inspect its current status:
+
+```javascript
+const request = await thing.invokeAction('fade', {
+  level: 50,
+  duration: 1000,
+});
+
+try {
+  const output = await request.completion;
+  console.log('Action completed:', output);
+} catch (error) {
+  console.error('Action failed:', error);
+}
+```
+
+Over HTTP, invoking an asynchronous action returns `202 Accepted` with the
+request status and a `Location` header. Fetch that URL to query the status.
+
 ## Development
 
 ### Type Checking

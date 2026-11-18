@@ -81,7 +81,7 @@ thing.setPropertyWriteHandler('level', async function (value) {
   return;
 });
 
-thing.setActionHandler('fade', async function (input) {
+thing.setActionInvokeHandler('fade', async function (input) {
   if (
     typeof input.level !== 'number' ||
     !Number.isFinite(input.level) ||

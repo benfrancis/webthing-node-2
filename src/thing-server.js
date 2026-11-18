@@ -1,4 +1,5 @@
 import express from 'express';
+import ActionRequest from './action-request.js';
 
 /** @typedef {import('./thing.js').default} Thing */
 /** @typedef {express.Request} Request */
@@ -104,6 +105,33 @@ class ThingServer {
       },
     );
 
+    this.app.get(
+      '/actions/:name/:id',
+      /**
+       * Query Action Status
+       *
+       * @param {Request} request
+       * @param {Response} response
+       */
+      (request, response) => {
+        const name = Array.isArray(request.params.name)
+          ? request.params.name[0]
+          : request.params.name;
+        const id = Array.isArray(request.params.id)
+          ? request.params.id[0]
+          : request.params.id;
+        try {
+          response.status(200).json(this.thing.queryAction(name, id));
+        } catch (error) {
+          if (error instanceof Error && error.message === 'NotFoundError') {
+            response.status(404).send();
+          } else {
+            response.status(500).send();
+          }
+        }
+      },
+    );
+
     this.app.post(
       '/actions/:name',
       /**
@@ -112,7 +140,6 @@ class ThingServer {
        * @param {Request} request
        * @param {Response} response
        *
-       * Note: All actions are currently treated as synchronous.
        */
       async (request, response) => {
         // Make sure name is a string since param can also be array
@@ -120,9 +147,9 @@ class ThingServer {
           ? request.params.name[0]
           : request.params.name;
         const input = request.body;
-        let output;
+        let result;
         try {
-          output = await this.thing.invokeAction(name, input);
+          result = await this.thing.invokeAction(name, input);
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'InternalError';
@@ -141,8 +168,13 @@ class ThingServer {
           }
           return;
         }
-        if (output != undefined) {
-          response.status(200).send(output);
+        if (result instanceof ActionRequest) {
+          response
+            .location(`/actions/${encodeURIComponent(name)}/${result.id}`)
+            .status(202)
+            .json(result.query());
+        } else if (result !== undefined) {
+          response.status(200).send(result);
         } else {
           response.status(204).send();
         }

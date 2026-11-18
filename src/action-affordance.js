@@ -1,4 +1,5 @@
 import InteractionAffordance from './interaction-affordance.js';
+import ActionRequest from './action-request.js';
 import ValidationError from './validation-error.js';
 
 /** @import {DataSchema, PartialActionDescription, ActionDescription, Form,
@@ -36,6 +37,11 @@ class ActionAffordance extends InteractionAffordance {
    * @type {boolean|undefined}
    */
   synchronous;
+
+  /**
+   * @type {Map<string, ActionRequest>}
+   */
+  actionRequests = new Map();
 
   /**
    * Create a new Action.
@@ -198,7 +204,7 @@ class ActionAffordance extends InteractionAffordance {
   /**
    * Set invoke handler function.
    *
-   * @param {(value: any) => Promise<void>} handler An asynchronous function to action invocations.
+   * @param {(value: any) => Promise<any>} handler An asynchronous function to handle action invocations.
    */
   setInvokeHandler(handler) {
     this.invokeHandler = handler;
@@ -209,10 +215,8 @@ class ActionAffordance extends InteractionAffordance {
    *
    * @param {any} input The input to the action, conforming to the input data
    *   schema.
-   * @returns {Promise<any>} A Promise which resolves with the output of the
-   *   action (if any), conforming to the output data schema.
-   *
-   * Note: All actions are currently treated as synchronous.
+   * @returns {Promise<any|ActionRequest>} Resolves with the action output
+   *   when synchronous, or an ActionRequest when asynchronous.
    */
   async invoke(input) {
     // TODO: Validate input against data schema
@@ -220,7 +224,15 @@ class ActionAffordance extends InteractionAffordance {
       console.error(`No invoke handler set for action ${this.name}`);
       throw new Error('InternalError');
     }
-    return this.invokeHandler(input);
+    const invokeHandler = this.invokeHandler;
+    if (this.synchronous === true) {
+      return invokeHandler(input);
+    } else {
+      const request = new ActionRequest();
+      this.actionRequests.set(request.id, request);
+      request.start(() => invokeHandler(input));
+      return request;
+    }
   }
 
   /**

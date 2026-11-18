@@ -16,6 +16,15 @@ describe('ThingServer', () => {
     actions: {
       blink: {
         title: 'Blink',
+        synchronous: true,
+      },
+      delayedBlink: {
+        title: 'Delayed Blink',
+        synchronous: false,
+      },
+      failedBlink: {
+        title: 'Failed Blink',
+        synchronous: false,
       },
     },
   };
@@ -30,7 +39,11 @@ describe('ThingServer', () => {
     thing.setPropertyWriteHandler('on', async (value) => {
       currentValue = value;
     });
-    thing.setActionHandler('blink', async (input) => input);
+    thing.setActionInvokeHandler('blink', async (input) => input);
+    thing.setActionInvokeHandler('delayedBlink', async (input) => input);
+    thing.setActionInvokeHandler('failedBlink', async () => {
+      throw new Error('Blink failed');
+    });
     server = new ThingServer(thing);
     // Listen on a random available port to avoid port conflicts
     await new Promise((resolve) => {
@@ -132,6 +145,60 @@ describe('ThingServer', () => {
       });
 
       assert.strictEqual(response.status, 404);
+    });
+  });
+
+  describe('asynchronous action requests', () => {
+    it('should return an accepted request and expose its status', async () => {
+      const input = { duration: 3 };
+      const response = await fetch(baseUrl + '/actions/delayedBlink', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+
+      assert.equal(response.status, 202);
+      const requestStatus = await response.json();
+      const statusUrl = response.headers.get('location');
+      assert.equal(statusUrl, `/actions/delayedBlink/${requestStatus.id}`);
+
+      const statusResponse = await fetch(baseUrl + statusUrl);
+      assert.equal(statusResponse.status, 200);
+      const status = await statusResponse.json();
+      assert.equal(status.id, requestStatus.id);
+      assert.equal(status.state, 'completed');
+      assert.deepEqual(status.output, input);
+    });
+
+    it('should return 404 for an unknown action request', async () => {
+      const response = await fetch(baseUrl + '/actions/delayedBlink/unknown');
+      assert.equal(response.status, 404);
+    });
+
+    it('should expose action failures in the request status', async () => {
+      const response = await fetch(baseUrl + '/actions/failedBlink', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+
+      assert.equal(response.status, 202);
+      const requestStatus = await response.json();
+      const statusResponse = await fetch(
+        baseUrl + response.headers.get('location'),
+      );
+      const status = await statusResponse.json();
+      assert.equal(statusResponse.status, 200);
+      assert.equal(status.id, requestStatus.id);
+      assert.equal(status.state, 'failed');
+      assert.deepEqual(status.error, {
+        title: 'Error',
+        detail: 'Blink failed',
+      });
     });
   });
 });
