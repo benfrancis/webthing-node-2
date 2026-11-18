@@ -220,7 +220,13 @@ class ActionAffordance extends InteractionAffordance {
       console.error(`No invoke handler set for action ${this.name}`);
       throw new Error('InternalError');
     }
-    return this.invokeHandler(input);
+    if (this.synchronous === true) {
+      return this.invokeHandler(input);
+    } else {
+      const request = new ActionRequest(this.invokeHandler(input));
+      this.actionRequests.set(request.id, request);
+    }
+
   }
 
   /**
